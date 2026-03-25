@@ -1,0 +1,16 @@
+{
+  "upstream": "Usefullatwork/system-basics-v2",
+  "branch": "main",
+  "lastSync": null,
+  "version": null,
+  "installed": {
+    "skills": [],
+    "agents": [],
+    "rules": [],
+    "commands": [],
+    "preset": null
+  },
+  "autoSync": false,
+  "syncInterval": "weekly",
+  "exclude": []
+}

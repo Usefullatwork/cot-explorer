@@ -1,0 +1,212 @@
+{
+  "$comment": "Full hooks template: standard + print() detection + i18n sync check + failure logging + notification audit + post-compact restore + config change tracking. For production Python projects with multi-agent workflows, internationalization, and strict logging policies.",
+
+  "hooks": {
+    "SubagentStart": [
+      {
+        "description": "Log spawned agent type and task description to .planning/agent-log.txt for traceability across multi-agent sessions.",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "mkdir -p .planning && echo \"[$(date '+%Y-%m-%d %H:%M:%S')] AGENT START | type=${AGENT_TYPE:-unknown} | task=${AGENT_TASK_DESCRIPTION:-no description}\" >> .planning/agent-log.txt",
+            "timeout": 3000
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "description": "Log agent completion status and wall-clock duration to .planning/agent-log.txt so post-session reviews can audit which agents finished cleanly.",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "mkdir -p .planning && echo \"[$(date '+%Y-%m-%d %H:%M:%S')] AGENT STOP  | type=${AGENT_TYPE:-unknown} | status=${AGENT_EXIT_STATUS:-unknown} | duration=${AGENT_DURATION_MS:-?}ms\" >> .planning/agent-log.txt",
+            "timeout": 3000
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "description": "Auto-save session state before context compression so progress is not lost if the compact fails or the session restarts.",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash hooks/scripts/auto-save-state.sh",
+            "timeout": 10000
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "description": "Run auto-sync check at session start to pull in any upstream changes or skill updates before work begins.",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash hooks/scripts/auto-sync.sh",
+            "timeout": 15000
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "description": "Append a session summary (timestamp, tool-call count, files modified) to .planning/session-log.txt for auditing and context-health tracking.",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "mkdir -p .planning && TC=$(cat /tmp/claude_tc 2>/dev/null || echo 0) && MODIFIED=$(git diff --name-only 2>/dev/null | wc -l | tr -d ' ') && echo \"[$(date '+%Y-%m-%d %H:%M:%S')] SESSION END | tool_calls=$TC | files_modified=$MODIFIED\" >> .planning/session-log.txt",
+            "timeout": 5000
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash hooks/scripts/plan-injector.sh",
+            "timeout": 3000
+          },
+          {
+            "type": "command",
+            "command": "bash hooks/scripts/branch-guard.sh",
+            "timeout": 2000
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash hooks/scripts/tool-counter.sh",
+            "timeout": 2000
+          },
+          {
+            "type": "command",
+            "command": "bash hooks/scripts/failure-gate.sh",
+            "timeout": 2000
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ruff format \"$TOOL_INPUT_FILE\" 2>/dev/null || true",
+            "timeout": 10000
+          },
+          {
+            "type": "command",
+            "command": "bash hooks/scripts/print-debug-check.sh \"$TOOL_INPUT_FILE\"",
+            "timeout": 3000
+          },
+          {
+            "type": "command",
+            "command": "bash hooks/scripts/i18n-sync-check.sh \"$TOOL_INPUT_FILE\"",
+            "timeout": 5000
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "description": "Log tool failures to .planning/failure-log.txt for post-session diagnosis of recurring issues.",
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "mkdir -p .planning && read -r INPUT && TOOL=$(echo \"$INPUT\" | jq -r '.tool_name // \"unknown\"' 2>/dev/null || echo unknown) && ERR=$(echo \"$INPUT\" | jq -r '.error // \"no details\"' 2>/dev/null | head -1) && echo \"[$(date '+%Y-%m-%d %H:%M:%S')] FAIL | tool=$TOOL | error=$ERR\" >> .planning/failure-log.txt",
+            "timeout": 3000
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "description": "Log system notifications to .planning/notification-log.txt for audit trail of permission prompts, idle events, and auth changes.",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "mkdir -p .planning && read -r INPUT && TYPE=$(echo \"$INPUT\" | jq -r '.notification_type // \"unknown\"' 2>/dev/null || echo unknown) && MSG=$(echo \"$INPUT\" | jq -r '.message // \"\"' 2>/dev/null | head -1) && echo \"[$(date '+%Y-%m-%d %H:%M:%S')] NOTIFY | type=$TYPE | message=$MSG\" >> .planning/notification-log.txt",
+            "timeout": 3000
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "description": "After context compaction, inject a reminder to restore state from the pre-compact snapshot so progress context is not lost.",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "SNAP=$(ls -t .planning/snapshots/pre-compact-*.md 2>/dev/null | head -1); if [ -n \"$SNAP\" ]; then CONTENT=$(head -20 \"$SNAP\" | sed 's/\\\\/\\\\\\\\/g; s/\"/\\\\\"/g; s/\\t/\\\\t/g' | tr '\\n' ' '); echo \"{\\\"systemMessage\\\":\\\"Post-compact: state snapshot available at $SNAP. Review it to restore context.\\\"}\"; fi",
+            "timeout": 5000
+          }
+        ]
+      }
+    ],
+    "ConfigChange": [
+      {
+        "description": "Log configuration changes to .planning/config-change-log.txt so settings drift is auditable.",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "mkdir -p .planning && read -r INPUT && SRC=$(echo \"$INPUT\" | jq -r '.source // \"unknown\"' 2>/dev/null || echo unknown) && FILE=$(echo \"$INPUT\" | jq -r '.file_path // \"unknown\"' 2>/dev/null || echo unknown) && echo \"[$(date '+%Y-%m-%d %H:%M:%S')] CONFIG CHANGE | source=$SRC | file=$FILE\" >> .planning/config-change-log.txt",
+            "timeout": 3000
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Before stopping, verify: (1) Does the code work? (2) Are tests passing? (3) Are there any print() statements that should be removed? (4) Are all modules using the logging module instead of print()? If any check fails, continue working."
+          }
+        ]
+      },
+      {
+        "description": "Send an OS notification when Claude finishes responding so the user knows to check this terminal.",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash hooks/scripts/notify-stop.sh",
+            "timeout": 8000
+          }
+        ]
+      }
+    ]
+  },
+
+  "$notes": [
+    "Includes everything from standard.json plus:",
+    "  - print() detection: warns when print() is added to source files",
+    "  - i18n sync check: warns when hardcoded user-facing strings are detected",
+    "  - PostToolUseFailure: logs tool failures to .planning/failure-log.txt",
+    "  - Notification: logs system notifications to .planning/notification-log.txt",
+    "  - PostCompact: injects reminder to restore state from pre-compact snapshot",
+    "  - ConfigChange: logs settings changes to .planning/config-change-log.txt",
+    "",
+    "print() detection:",
+    "  - Only checks .py files (ignores tests, scripts, config)",
+    "  - Allows logging.* calls (only blocks print())",
+    "  - Injects a systemMessage reminding Claude to use the logging module",
+    "",
+    "i18n sync check:",
+    "  - Scans for hardcoded strings in JSX/TSX that look user-facing",
+    "  - Only checks component files (*.tsx, *.jsx)",
+    "  - Warns about strings that should use t('key') translation function",
+    "  - Adjust the i18n function name in i18n-sync-check.sh",
+    "",
+    "This template is opinionated. Remove hooks you do not need."
+  ]
+}

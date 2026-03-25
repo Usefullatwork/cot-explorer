@@ -1,0 +1,8 @@
+{
+  "name": "saas",
+  "description": "SaaS applications. API documentation, DevOps, performance monitoring, CI/CD.",
+  "extends": "core",
+  "agents": ["api-documenter"],
+  "skills": ["api-docs", "multi-tenant-audit", "onboarding-flow"],
+  "rules": ["api-standards", "multi-tenant"]
+}

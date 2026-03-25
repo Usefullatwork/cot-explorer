@@ -1,0 +1,76 @@
+{
+  "$comment": "Standard hooks template: minimal + branch guard + 3-strike failure gate + ruff. Suitable for most Python projects with CI.",
+
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash hooks/scripts/plan-injector.sh",
+            "timeout": 3000
+          },
+          {
+            "type": "command",
+            "command": "bash hooks/scripts/branch-guard.sh",
+            "timeout": 2000
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash hooks/scripts/tool-counter.sh",
+            "timeout": 2000
+          },
+          {
+            "type": "command",
+            "command": "bash hooks/scripts/failure-gate.sh",
+            "timeout": 2000
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ruff format \"$TOOL_INPUT_FILE\" 2>/dev/null || true",
+            "timeout": 10000
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Before stopping, verify: (1) Does the code work? (2) Are tests passing? (3) Is there anything the user should know? If any check fails, continue working."
+          }
+        ]
+      }
+    ]
+  },
+
+  "$notes": [
+    "Includes everything from minimal.json plus:",
+    "  - Branch guard: prevents edits on main/master/production branches",
+    "  - Failure gate: tracks consecutive Bash failures, warns at 3 strikes",
+    "  - Ruff: auto-formats Python files after Write/Edit",
+    "  - Stop verification: prompts Claude to self-check before finishing",
+    "",
+    "Branch guard protected branches default to: main, master, production, staging.",
+    "Adjust PROTECTED_BRANCHES in branch-guard.sh for your project.",
+    "",
+    "Failure gate resets on any successful command.",
+    "After 3 consecutive failures, injects a warning to re-plan.",
+    "",
+    "Replace 'ruff format' with your formatter (black, autopep8, etc.)."
+  ]
+}
