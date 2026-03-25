@@ -23,7 +23,7 @@ from datetime import datetime, timezone
 
 # ── Konfigurasjon ─────────────────────────────────────────
 BASE           = Path(__file__).parent
-DATA_FILE      = BASE / "data" / "macro.json"
+DATA_FILE      = BASE / "data" / "macro" / "latest.json"
 MIN_SCORE      = int(os.environ.get("PUSH_MIN_SCORE",   "5"))
 MAX_SIGNALS    = int(os.environ.get("PUSH_MAX_SIGNALS", "5"))
 TG_TOKEN       = os.environ.get("TELEGRAM_TOKEN",  "")
