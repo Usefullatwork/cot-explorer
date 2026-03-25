@@ -46,7 +46,10 @@
     ]
   },
   "permissions": {
+    "defaultMode": "bypassPermissions",
     "allow": [
+      "Edit(*)",
+      "Write(*)",
       "Bash(python *)",
       "Bash(python3 *)",
       "Bash(pytest *)",
@@ -57,9 +60,28 @@
       "Bash(chmod *)",
       "Bash(mkdir *)",
       "Bash(ls *)",
-      "Bash(bash scripts/*)",
-      "Bash(bash hooks/*)",
-      "Bash(bash update.sh)"
+      "Bash(rm *)",
+      "Bash(cp *)",
+      "Bash(mv *)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(grep *)",
+      "Bash(find *)",
+      "Bash(wc *)",
+      "Bash(diff *)",
+      "Bash(sort *)",
+      "Bash(touch *)",
+      "Bash(echo *)",
+      "Bash(bash *)"
+    ],
+    "ask": [
+      "Bash(git push *)",
+      "Bash(git reset --hard *)"
+    ],
+    "deny": [
+      "Read(.env)",
+      "Read(.env.*)"
     ]
   }
 }
