@@ -85,14 +85,14 @@ Spawn ALL agents in a single message. Each agent gets:
 4. **Context** — Relevant project information the agent needs
 
 ```
-Agent 1 (backend-dev): "Implement auth endpoints in backend/src/routes/auth.ts and
-  backend/src/controllers/auth.ts. Run backend tests when done."
+Agent 1 (backend-dev): "Refactor price fetchers out of fetch_all.py into
+  price_fetchers.py. Run ruff check when done."
 
-Agent 2 (frontend-dev): "Implement login page in web/src/pages/Login.tsx and
-  web/src/components/LoginForm.tsx. Run frontend tests when done."
+Agent 2 (backend-dev): "Extract indicator functions (calc_atr, calc_ema, etc.)
+  into indicators.py. Run pytest when done."
 
-Agent 3 (test-analyzer): "Write E2E tests for the auth flow in e2e/auth.spec.ts.
-  Do NOT modify any source files — tests only."
+Agent 3 (test-analyzer): "Write unit tests for calc_atr and calc_ema in
+  tests/test_indicators.py. Do NOT modify source files — tests only."
 ```
 
 ## Post-Dispatch Rules

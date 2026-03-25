@@ -96,11 +96,11 @@ Scan source code, logs, and configuration for:
 
 ### Input Validation
 
-- All API inputs validated with schema (Zod, Joi, class-validator)
-- File uploads: type validation, size limits, filename sanitization
-- URL parameters: type coercion, range validation
-- Request body size limits configured
-- Content-Type enforcement on API routes
+- All external API responses validated before use (check for expected keys, types)
+- File operations: path sanitization, size limits, safe filename handling
+- User-provided parameters: type coercion, range validation
+- `subprocess`, `eval()`, `exec()`, `pickle.loads()` with untrusted input — forbidden
+- `os.system()` or `os.popen()` with user input — use `subprocess.run()` with explicit args instead
 
 ## Output Format
 
@@ -121,15 +121,15 @@ SUMMARY
 FINDINGS
 
 [CRITICAL] A01: Missing auth middleware on admin route
-  File: src/routes/admin.ts:15
-  Evidence: router.get('/users', adminController.list) — no requireAuth
-  Fix: Add requireAuth and requireRole('admin') middleware
-  Regulation: OWASP A01 — Broken Access Control
+  File: fetch_all.py:9
+  Evidence: bare `except:` clause swallows ImportError silently
+  Fix: Use `except ImportError:` to catch only expected exceptions
+  Regulation: OWASP A05 — Security Misconfiguration
 
-[HIGH] GDPR: No account deletion endpoint
-  Evidence: No DELETE /api/users/me route found
-  Fix: Implement cascade delete of all user data
-  Regulation: GDPR Article 17 — Right to erasure
+[HIGH] A02: API key potentially exposed in URL
+  Evidence: fetch_all.py:132 — API key in query string (visible in logs/history)
+  Fix: Verify API keys are only in env vars, never logged
+  Regulation: OWASP A02 — Cryptographic Failures
 ```
 
 ## Rules
@@ -139,5 +139,5 @@ FINDINGS
 - Include the regulation or standard being violated
 - Provide actionable fix recommendations, not just problem descriptions
 - Do not flag style or formatting issues
-- Do not flag dependencies with known vulnerabilities — that is npm audit territory
+- Do not flag dependencies with known vulnerabilities — that is pip-audit territory
 - Focus on application-level security, not infrastructure

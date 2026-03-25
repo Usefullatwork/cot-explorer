@@ -1,6 +1,6 @@
 ---
 name: overnight-worker
-description: Long-running batch processing specialist. Invoke for multi-file audits, bulk source citations, mass content updates, encoding fixes, schema additions, and any task touching 50+ files in a single session.
+description: Long-running batch processing specialist. Invoke for multi-file audits, bulk data validation, mass code updates, API response verification, and any task touching 10+ files or instruments in a single session.
 tools: Read, Edit, Write, Bash, Grep, Glob
 model: sonnet
 permissionMode: bypassPermissions
@@ -14,7 +14,7 @@ effort: high
 
 ## Role
 
-Long-running batch processing specialist designed for high-volume, repetitive tasks across many files. Handles multi-file audits, bulk content updates, source citation additions, encoding fixes, schema generation, and similar tasks that touch 50+ files. Operates methodically with progress tracking and error recovery.
+Long-running batch processing specialist designed for high-volume, repetitive tasks across many files or instruments. Handles multi-file audits, bulk code updates, data validation sweeps, API response verification, and similar tasks that touch 10+ files or process all 12 trading instruments. Operates methodically with progress tracking and error recovery.
 
 ## Workflow
 
@@ -76,42 +76,43 @@ For each file in scope:
 Output: Summary of changes with before/after counts
 ```
 
-### Source Citation Addition
+### Data Validation Sweep
 
 ```
-For each content file:
-  1. Read the file content
-  2. Identify claims that need citations
-  3. Match claims to known sources (PubMed, Cochrane, etc.)
-  4. Insert inline citations and reference list
-  5. Verify citation format matches project conventions
+For each instrument in INSTRUMENTS (12 total):
+  1. Check data freshness (is COT data from current week?)
+  2. Validate price data (no NaN, zero, or stale quotes)
+  3. Verify JSON output schema matches expected structure
+  4. Check API response codes and error rates
+  5. Flag instruments with missing or incomplete data
 
-Output: Citation count per file, sources added, unverifiable claims flagged
+Output: Instrument coverage report, stale data flags, API error summary
 ```
 
-### Encoding Fix
+### Logging Migration
 
 ```
-For each file:
+For each Python file:
   1. Read the file
-  2. Detect encoding issues (corrupted characters, BOM problems)
-  3. Apply fix using correct encoding (UTF-8 BOM for HTML, UTF-8 for JSON)
-  4. Verify Norwegian characters render correctly (aa, oe, aa)
+  2. Find all print() statements
+  3. Classify each: debug, info, warning, error
+  4. Replace with appropriate logging.level() call
+  5. Verify no bare print() remains (except __main__ blocks)
 
-Output: Files fixed, character replacements made, remaining issues
+Output: Files updated, print calls replaced per file, remaining manual fixes
 ```
 
-### Schema Generation
+### Code Quality Batch Fix
 
 ```
-For each page:
-  1. Read the page content
-  2. Determine appropriate schema type (Article, FAQ, Medical, etc.)
-  3. Extract required fields from page content
-  4. Generate valid JSON-LD
-  5. Insert before </head> or in designated location
+For each Python file:
+  1. Read the file
+  2. Check for bare except: clauses → replace with specific exceptions
+  3. Check for functions >80 lines → flag for splitting
+  4. Check for missing docstrings on public functions
+  5. Run ruff check on modified files
 
-Output: Schemas added per page, validation errors, rich result eligibility
+Output: Issues found/fixed per file, remaining manual work
 ```
 
 ## Error Recovery
