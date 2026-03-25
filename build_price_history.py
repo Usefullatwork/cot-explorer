@@ -3,8 +3,16 @@
 Henter ukentlig prishistorikk fra Yahoo og lagrer som data/prices/{symbol}.json
 Kjøres lokalt sammen med fetch_cot.py
 """
+import logging
 import urllib.request, urllib.parse, json, os
 from datetime import datetime, timezone
+
+log = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(name)s %(levelname)s %(message)s",
+    datefmt="%H:%M:%S",
+)
 
 BASE = os.path.expanduser("~/cot-explorer/data/prices")
 os.makedirs(BASE, exist_ok=True)
@@ -69,11 +77,11 @@ def fetch_weekly(yahoo_sym, years=15):
             out.append({"date": dt, "price": round(cl[i], 5 if cl[i]<100 else 2)})
         return out
     except Exception as e:
-        print(f"  FEIL: {e}")
+        log.error("FEIL: %s", e)
         return []
 
 for inst in INSTRUMENTS:
-    print(f"Henter {inst['navn']} ({inst['yahoo']})...")
+    log.info("Henter %s (%s)...", inst['navn'], inst['yahoo'])
     rows = fetch_weekly(inst["yahoo"])
     if not rows:
         continue
@@ -81,10 +89,10 @@ for inst in INSTRUMENTS:
     path = os.path.join(BASE, inst["key"] + ".json")
     with open(path, "w") as f:
         json.dump(out, f, ensure_ascii=False)
-    print(f"  {len(rows)} uker → {path}")
+    log.info("%d uker → %s", len(rows), path)
 
 # Lagre COT→pris mapping
 with open(os.path.join(BASE, "cot_map.json"), "w") as f:
     json.dump(COT_TO_PRICE, f, ensure_ascii=False, indent=2)
 
-print(f"\nFerdig! Lagret i data/prices/")
+log.info("Ferdig! Lagret i data/prices/")

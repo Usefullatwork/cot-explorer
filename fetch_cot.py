@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
+import logging
 import urllib.request, zipfile, csv, json, os, sys, shutil
 from datetime import datetime
+
+log = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(name)s %(levelname)s %(message)s",
+    datefmt="%H:%M:%S",
+)
 
 opener = urllib.request.build_opener()
 opener.addheaders = [("User-Agent", "Mozilla/5.0")]
@@ -96,7 +104,7 @@ def download_and_extract(url, tmp_dir):
             if f.endswith(".txt") and f != "cot.zip":
                 return os.path.join(tmp_dir, f)
     except Exception as e:
-        print(f"  Feil: {e}")
+        log.error("Feil: %s", e)
     return None
 
 def parse_file(csv_file, report_id, keep_all=False):
@@ -181,7 +189,7 @@ def parse_file(csv_file, report_id, keep_all=False):
                     if mkt not in results or date > results[mkt]["date"]:
                         results[mkt] = entry
     except Exception as e:
-        print(f"  Parse-feil: {e}")
+        log.error("Parse-feil: %s", e)
     if keep_all:
         out = []
         for entries in results.values():
@@ -198,7 +206,7 @@ def process_report(report, year=None, keep_all=False):
     url = report["url"] if year is None else report["hist_pat"].replace("YYYY", str(year))
     rid = report["id"]
     yr  = year or YEAR
-    print(f"  Laster {rid} {yr}...")
+    log.info("Laster %s %s...", rid, yr)
     tmp = f"/tmp/cot_{rid}_{yr}"
     os.makedirs(tmp, exist_ok=True)
     csv_file = download_and_extract(url, tmp)
@@ -206,17 +214,17 @@ def process_report(report, year=None, keep_all=False):
         return []
     data = parse_file(csv_file, rid, keep_all=keep_all)
     shutil.rmtree(tmp, ignore_errors=True)
-    print(f"  {len(data)} markeder")
+    log.info("%d markeder", len(data))
     return data
 
 do_history = "--history" in sys.argv
 today = datetime.now().strftime("%Y-%m-%d")
-print("COT Explorer – Datanedlasting")
-print("=" * 40)
+log.info("COT Explorer – Datanedlasting")
+log.info("=" * 40)
 
 all_current = []
 for report in REPORTS:
-    print(f"\n[{report['id'].upper()}]")
+    log.info("[%s]", report['id'].upper())
     data = process_report(report)
     if data:
         save(f"data/{report['id']}/latest.json", data)
@@ -233,16 +241,16 @@ for d in all_current:
 combined.sort(key=lambda x: (x["kategori"], x["navn_no"]))
 save("data/combined/latest.json", combined)
 save(f"data/combined/{today}.json", combined)
-print(f"\nKombinert: {len(combined)} markeder -> data/combined/latest.json")
+log.info("Kombinert: %d markeder -> data/combined/latest.json", len(combined))
 
 if do_history:
-    print("\n[HISTORISKE DATA]")
+    log.info("[HISTORISKE DATA]")
     for report in REPORTS:
         for yr in range(report["hist_from"], YEAR):
             data = process_report(report, yr, keep_all=True)
             if data:
                 save(f"data/history/{report['id']}/{yr}.json", data)
-    print("Historiske data lagret i data/history/")
+    log.info("Historiske data lagret i data/history/")
 
-print("\nFerdig! Kjor:")
-print("git add data/ && git commit -m 'oppdater COT-data' && git push origin main")
+log.info("Ferdig! Kjor:")
+log.info("git add data/ && git commit -m 'oppdater COT-data' && git push origin main")

@@ -17,8 +17,16 @@ Vekting for høy-sannsynlighets-setups:
   - Konsensus-multiplikator: ×1.4 når inflasjon+jobs peker SAMME vei,
     ×0.7 når de peker MOT hverandre → demper mixet signal
 """
+import logging
 import urllib.request, json, os, time
 from datetime import datetime, timezone
+
+log = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(name)s %(levelname)s %(message)s",
+    datefmt="%H:%M:%S",
+)
 
 FRED_API_KEY = os.environ.get("FRED_API_KEY", "")
 BASE = os.path.expanduser("~/cot-explorer/data")
@@ -109,7 +117,7 @@ def fetch_fred_api(series_id, limit=16):
                     pass
         return list(reversed(obs))
     except Exception as e:
-        print(f"  FRED {series_id} FEIL: {e}")
+        log.error("FRED %s FEIL: %s", series_id, e)
         return []
 
 # ── Scoring per indikator ─────────────────────────────────────────────────────
@@ -400,22 +408,22 @@ def consensus_multiplier(cat_scores):
         return 0.5   # Ingen klar kategori-signal
 
 # ══ HOVEDLOGIKK ══════════════════════════════════════════════════════════════
-print("=== fetch_fundamentals.py ===")
-print(f"FRED API-nøkkel: {'***' + FRED_API_KEY[-4:] if FRED_API_KEY else 'MANGLER'}")
+log.info("=== fetch_fundamentals.py ===")
+log.info("FRED API-nøkkel: %s", '***' + FRED_API_KEY[-4:] if FRED_API_KEY else 'MANGLER')
 
 indicators = {}
 
 # 1. Hent FRED-data
 for key, cfg in FRED_SERIES.items():
-    print(f"  Henter {key} ({cfg['id']})...")
+    log.info("Henter %s (%s)...", key, cfg['id'])
     limit  = 16 if cfg["type"] == "yoy" else 6
     obs    = fetch_fred_api(cfg["id"], limit=limit)
     result = compute_indicator(key, cfg, obs)
     if result:
         indicators[key] = result
-        print(f"    → {result['current']} ({result['trend']:5s})  score={result['score']:+d}")
+        log.info("    → %s (%-5s)  score=%+d", result['current'], result['trend'], result['score'])
     else:
-        print(f"    → FEIL eller for få datapunkter")
+        log.warning("    → FEIL eller for få datapunkter")
     time.sleep(0.15)
 
 # 2. Supplement PMI fra kalender
@@ -432,8 +440,8 @@ for k, pmi in cal_pmi.items():
         "trend":    "ukjent",
         "kilde":    "kalender",
     }
-    print(f"  Kalender {k}: actual={pmi['actual']}  forecast={pmi.get('forecast')}"
-          f"  score={pmi['score']:+d}")
+    log.info("Kalender %s: actual=%s  forecast=%s  score=%+d",
+             k, pmi['actual'], pmi.get('forecast'), pmi['score'])
 
 # 3. Beregn vektede kategori-gjennomsnitt
 cat_avgs = {}
@@ -508,13 +516,13 @@ with open(OUT, "w") as f:
     json.dump(output, f, ensure_ascii=False, indent=2)
 
 # 8. Utskrift
-print(f"\nLagret → {OUT}")
-print(f"Konsensus-multiplikator: ×{multiplier}")
-print(f"USD fundamental: {usd_bias.upper()}  (score={usd_score:+.3f})")
+log.info("Lagret → %s", OUT)
+log.info("Konsensus-multiplikator: ×%s", multiplier)
+log.info("USD fundamental: %s  (score=%+.3f)", usd_bias.upper(), usd_score)
 for cat, cs in category_scores.items():
-    print(f"  {cat:14s}: {cs['bias']:14s}  (vektet avg={cs['avg']:+.2f})")
-print("\nInstrument-prediksjon:")
+    log.info("  %-14s: %-14s  (vektet avg=%+.2f)", cat, cs['bias'], cs['avg'])
+log.info("Instrument-prediksjon:")
 for k, v in instrument_scores.items():
     bar = "▲" if "bullish" in v["bias"] else "▼" if "bearish" in v["bias"] else "─"
     bb = "!" if "strong" in v["bias"] else " "
-    print(f"  {bar}{bb} {k:8s}: {v['score']:+.2f}  {v['bias']}")
+    log.info("  %s%s %-8s: %+.2f  %s", bar, bb, k, v['score'], v['bias'])

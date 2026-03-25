@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
+import logging
 import urllib.request, json, os
 from datetime import datetime, timezone, timedelta
+
+log = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(name)s %(levelname)s %(message)s",
+    datefmt="%H:%M:%S",
+)
 
 BASE = os.path.expanduser("~/cot-explorer/data/calendar")
 os.makedirs(BASE, exist_ok=True)
@@ -23,7 +31,7 @@ try:
     with urllib.request.urlopen(req, timeout=10) as r:
         raw = json.loads(r.read())
 except Exception as e:
-    print(f"FEIL: {e}")
+    log.error("FEIL: %s", e)
     exit(1)
 
 now    = datetime.now(timezone.utc)
@@ -60,6 +68,6 @@ out = {"updated": now.isoformat(), "events": events}
 with open(OUT,"w") as f:
     json.dump(out, f, ensure_ascii=False, indent=2)
 
-print(f"Lagret {len(events)} events ({sum(1 for e in events if e['impact']=='High')} High)")
+log.info("Lagret %d events (%d High)", len(events), sum(1 for e in events if e['impact']=='High'))
 for e in events[:8]:
-    print(f"  {e['cet']:18s} {e['country']:4s} [{e['impact']:6s}] {e['title'][:40]}")
+    log.info("  %-18s %-4s [%-6s] %s", e['cet'], e['country'], e['impact'], e['title'][:40])

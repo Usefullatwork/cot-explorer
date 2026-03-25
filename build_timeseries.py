@@ -3,8 +3,15 @@
 Bygger data/timeseries/{symbol}_{report}.json fra data/history/
 Én fil per marked med alle ukentlige datapunkter sortert kronologisk.
 """
-import json, os
+import json, logging, os
 from datetime import datetime
+
+log = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(name)s %(levelname)s %(message)s",
+    datefmt="%H:%M:%S",
+)
 
 BASE    = os.path.expanduser("~/cot-explorer/data")
 HIST    = os.path.join(BASE, "history")
@@ -20,11 +27,11 @@ markets = {}  # key = (symbol, report) → metadata + data[]
 for report in REPORTS:
     hist_dir = os.path.join(HIST, report)
     if not os.path.exists(hist_dir):
-        print(f"Mangler: {hist_dir}")
+        log.warning("Mangler: %s", hist_dir)
         continue
 
     files = sorted(os.listdir(hist_dir))
-    print(f"\n{report}: {len(files)} år")
+    log.info("%s: %d år", report, len(files))
 
     for fname in files:
         if not fname.endswith(".json"):
@@ -149,10 +156,10 @@ index.sort(key=lambda x: (-x["weeks"], x["navn_no"]))
 with open(os.path.join(TS_DIR, "index.json"), "w") as f:
     json.dump(index, f, ensure_ascii=False, indent=2)
 
-print(f"\nFerdig! {written} filer skrevet, {skipped} hoppet over (<10 uker)")
-print(f"Index: {len(index)} markeder")
+log.info("Ferdig! %d filer skrevet, %d hoppet over (<10 uker)", written, skipped)
+log.info("Index: %d markeder", len(index))
 
 # Vis topp 10
-print("\nTopp 10 med mest data:")
+log.info("Topp 10 med mest data:")
 for entry in index[:10]:
-    print(f"  {entry['weeks']:4d} uker  {entry['navn_no']:30s}  {entry['report']}")
+    log.info("  %4d uker  %-30s  %s", entry['weeks'], entry['navn_no'], entry['report'])
