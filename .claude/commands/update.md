@@ -1,48 +1,33 @@
 ---
-description: Check all connected skill repos, plugins, MCPs, and npm packages for updates and apply them
+description: Check for updates from System Basics V2 upstream and apply them manually
 ---
 
-Run the unified System Basics V2 updater to check ALL connected sources for updates.
+Check for upstream updates from the System Basics V2 repository.
 
 ## Steps
 
-1. Run the unified update checker to see what is available:
+1. Check the current installed version:
    ```bash
-   node scripts/update.js --check --verbose
+   cat .system-basics.json | python3 -c "import sys,json; print(json.load(sys.stdin).get('version','unknown'))"
    ```
 
-2. Show the update table to the user. The table groups sources by status:
-   - **UPDATE** -- newer version available
-   - **NEW** -- source not yet installed locally
-   - **OK** -- up to date
-   - **ERROR** -- could not check (network, rate limit, etc.)
-
-3. Ask the user which updates to apply:
-   - "all" -- apply everything
-   - Specific source names -- only those
-   - "none" -- cancel
-
-4. Apply the selected updates:
-   - For "all": `node scripts/update.js --force`
-   - For specific types: `node scripts/update.js --force skills` (or agents, plugins, npm)
-   - For npm packages: show the user the npm install commands to run manually
-   - For plugins: show the user the `claude plugins update` commands to run manually
-
-5. After applying, verify the update succeeded:
+2. Check the latest upstream version:
    ```bash
-   node scripts/update.js --check
+   git ls-remote --tags https://github.com/Usefullatwork/system-basics-v2 | tail -5
    ```
 
-6. Report summary: how many updated, how many new, any errors.
+3. Compare versions. If upstream is newer, show what changed:
+   - New agents, skills, or commands added
+   - Existing files updated
 
-## Source Types
+4. If user wants to update:
+   - Clone or pull the upstream repo to a temp location
+   - Compare files and show diffs
+   - Copy updated files manually, preserving local adaptations
+   - Update `.system-basics.json` with new version
 
-The updater checks these source categories:
-- **GitHub repos** -- skills, agents, commands from tracked repositories
-- **Claude Code plugins** -- from ~/.claude/plugins/installed_plugins.json
-- **npm packages** -- MCP servers and CLI tools
-- **Local skills** -- skills with their own package.json
+5. **Important**: Do NOT overwrite locally adapted files (compliance-scanner, overnight-worker, overnight-sweep, parallel-dispatcher) without confirming with user first.
 
-## Environment
+## Note
 
-Set `GITHUB_TOKEN` for higher API rate limits (5000/hr vs 60/hr unauthenticated).
+SB2 skill management is manual for this project. There is no automated `node scripts/update.js` — use git operations to sync from upstream.

@@ -1,5 +1,5 @@
 ---
-description: Add a skill from the System Basics V2 repository or a custom GitHub URL
+description: Add a skill from System Basics V2 or a custom GitHub URL
 argument-hint: <skill-name or GitHub URL>
 ---
 
@@ -10,27 +10,30 @@ Install a skill into the current project from the upstream System Basics V2 repo
 ## Steps
 
 1. Parse the argument:
-   - If it is a skill name (e.g., `seo-audit`), fetch from the configured upstream repo (default: `Usefullatwork/system-basics-v2`).
-   - If it is a GitHub URL (e.g., `https://github.com/someone/custom-skill`), fetch from that repo.
-   - If it is a `owner/repo:skill-name` format, fetch the specific skill from that repo.
+   - If it is a skill name (e.g., `seo-audit`), fetch from `Usefullatwork/system-basics-v2`.
+   - If it is a GitHub URL, fetch from that repo.
+   - If it is `owner/repo:skill-name`, fetch the specific skill from that repo.
 
-2. If no argument is provided, list available skills:
+2. If no argument provided, list available skills from the upstream repo:
    ```bash
-   node scripts/add-skill.js --list
+   git clone --depth 1 https://github.com/Usefullatwork/system-basics-v2 /tmp/sb2-skills
+   ls /tmp/sb2-skills/.claude/skills/
    ```
 
-3. Install the skill:
+3. Install the skill by copying files:
    ```bash
-   node scripts/add-skill.js <argument>
+   cp -r /tmp/sb2-skills/.claude/skills/<skill-name> .claude/skills/
    ```
 
-4. The skill files will be copied to `.claude/skills/<skill-name>/`.
+4. Update `.system-basics.json` to record the newly installed skill.
 
-5. Update `.system-basics.json` to record the newly installed skill.
-
-6. After installation, read the skill's SKILL.md to understand what it does:
+5. Read the installed skill's SKILL.md:
    ```bash
    cat .claude/skills/<skill-name>/SKILL.md
    ```
 
-7. Report success: skill name, number of files installed, and a brief description of the skill's purpose.
+6. Report: skill name, files installed, brief description.
+
+## Note
+
+Skills may need adaptation after install if they reference JS/TS tooling that doesn't apply to this Python project. Check for npm, node, package.json references.
